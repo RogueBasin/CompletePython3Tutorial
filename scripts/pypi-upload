@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+upload_args=${@:- -r pypi-test}
+
+create_distribution () {
+    python setup.py sdist bdist_wheel
+}
+
+upload_distribution () {
+    dist_path=${1:-dist/}
+    dist_matched=`ls -t $dist_path/*.whl 2>/dev/null | head -1 2>/dev/null`
+    matched_gpg=`ls -t $dist_matched.asc  2>/dev/null | head -1 2>/dev/null`
+    rm -f $matched_gpg
+    if [[ -e $dist_matched ]] ; then
+        twine upload $upload_args -s $dist_matched
+    fi
+}
+
+create_distribution
+upload_distribution

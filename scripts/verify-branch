@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from git import Repo
+
+
+class InvalidBranch(Exception):
+    pass
+
+
+def check_branch(expected_branch_name=None):
+    repo = Repo()
+    expected_branch_name = expected_branch_name or 'master'
+    branch_name = repo.active_branch.name
+    if branch_name != expected_branch_name:
+        err_msg = 'Branch "{branch_name}" is not expected branch "{expected_branch_name}".  Halting.'.format(
+            branch_name=branch_name, expected_branch_name=expected_branch_name
+        )
+        raise InvalidBranch(err_msg)
+
+
+if __name__ == '__main__':
+    import click
+
+    @click.command()
+    @click.argument('branch_name', required=False, default='master')
+    def handle_cli(branch_name):
+        check_branch(expected_branch_name=branch_name)
+
+    handle_cli()

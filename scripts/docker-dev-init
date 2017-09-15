@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+# ----------------------------------------------------------------------
+# Docker
+# ----------------------------------------------------------------------
+# Run this in its own terminal
+alias sen="docker run -v /var/run/docker.sock:/run/docker.sock -ti -e TERM tomastomecek/sen"
+
+# ----------------------------------------------------------------------
+# Prunes old docker images and containers
+# While this does work, if you are using a Mac there are still issues:
+#   https://github.com/docker/for-mac/issues/371
+# Work-around is to periodically delete Docker.qcow2
+dclean() {
+    docker container prune -f 1>/dev/null
+    docker image prune -f 1>/dev/null
+    docker volume prune -f 1>/dev/null
+}
+
+
+# ----------------------------------------------------------------------
+# Runs a command within the virtual environment on the api docker container
+#   Look at the docker-entrypoint.sh files under provision/docker/
+#   for available options on the command-line.
+dd() {
+    container=`docker ps | grep rb_tutorial | awk '{print $NF}'`
+
+    if [[ -z "${container}" ]]; then
+        echo "Could not find container"
+    else
+        docker exec -it $container dep $@
+    fi
+}
+
+# ----------------------------------------------------------------------
+# Waits for a container to shutdown
+dwait() {
+    container=$1
+    if [[ -n "${container}" ]]; then
+        echo "Waiting on shutdown of container: ${container}"
+        docker wait $container &>/dev/null
+    fi
+}
+
+# ----------------------------------------------------------------------
+# stops an old docker stack
+# builds a new docker stack
+# starts a docker stack
+dbuild() {
+    # Docker swarm needs to be initialized before this function can
+    # run.  So just attempt to initialize.
+    docker swarm init 2>/dev/null
+    stack_name=$1
+    app_container=`docker ps | grep ${stack_name}_rb_tutorial | awk '{print $NF}'`
+    docker stack rm $stack_name 2>/dev/null \
+      && dwait $app_container \
+      && dclean \
+      && docker system prune -f 1>/dev/null \
+      && docker-compose build \
+      && docker stack deploy -c docker-compose.yml $stack_name \
+      && echo "Deployed stack: ${stack_name}"
+}

@@ -1,0 +1,27 @@
+version: '3.3'
+
+services:
+
+  rb_tutorial:
+    image: "rb_tutorial-0.1.0"
+    build:
+      context: .
+      dockerfile: provision/docker/rb_tutorial.dockerfile
+      args:
+        base_python_version: 3.6
+
+    networks:
+      - isolated
+    volumes:
+      - ".:/repos/rb_tutorial"
+    entrypoint:
+      - "wait-for-it"
+      - "db:5432"
+      - "--"
+      - "/usr/local/bin/dep"
+    command: ["/bin/bash"]
+
+networks:
+
+  isolated:
+    driver: overlay
